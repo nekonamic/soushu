@@ -21,7 +21,7 @@ db.close();
 (async () => {
     const domain = 'ac1ss.ascwefkjw.com'
     const baseUrl = 'https://ac1ss.ascwefkjw.com/'
-    const mobileTXTPath = 'forum.php?mod=forumdisplay&fid=40'
+    const mobileTXTPath = ''
 
     const browser = await chromium.launch({ headless: true });
     const context = await browser.newContext();
@@ -44,7 +44,7 @@ db.close();
     await context.addCookies(cookies);
     const page = await context.newPage();
 
-    await page.goto(baseUrl + mobileTXTPath, { waitUntil: 'load' });
+    await page.goto(baseUrl + mobileTXTPath, { waitUntil: 'load', timeout: 0 });
 
     while (true) {
         const threadList = page.locator('table#threadlisttableid tbody');
@@ -75,7 +75,7 @@ db.close();
                     }
 
                     const threadPage = await context.newPage();
-                    await threadPage.goto(baseUrl + href, { waitUntil: 'load' });
+                    await threadPage.goto(baseUrl + href, { waitUntil: 'load', timeout: 0 });
 
                     const fullPageContent = await threadPage.content();
 
@@ -142,7 +142,7 @@ db.close();
         } else {
             const nextPath = await nextElement.getAttribute('href')
             if (nextPath != null) {
-                await page.goto(baseUrl + nextPath, { waitUntil: 'load' })
+                await page.goto(baseUrl + nextPath, { waitUntil: 'load', timeout: 0 })
                 console.log(baseUrl + nextPath)
             }
         }
