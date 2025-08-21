@@ -1,36 +1,22 @@
 const { chromium } = require('playwright');
 const iconv = require('iconv-lite');
 const jschardet = require('jschardet');
-const sqlite3 = require('sqlite3').verbose();
 const path = require('path');
+const Database = require('better-sqlite3');
 
-const dbPath = path.join(__dirname, 'novel.db');
+const dbPath = './novel.db';
 
-const db = new sqlite3.Database(dbPath, (err) => {
-    if (err) {
-        console.error(err);
-    }
-});
+const db = new Database(dbPath);
 
-db.serialize(() => {
-    db.run(`
-        CREATE TABLE IF NOT EXISTS novels (
-            tid INTEGER PRIMARY KEY,
-            title TEXT,
-            content TEXT
-        )
-    `, (err) => {
-        if (err) {
-            console.error(err);
-        }
-    });
-});
+db.prepare(`
+    CREATE TABLE IF NOT EXISTS novels (
+        tid INTEGER PRIMARY KEY,
+        title TEXT,
+        content TEXT
+    )
+`).run();
 
-db.close((err) => {
-    if (err) {
-        console.error(err);
-    }
-});
+db.close();
 
 (async () => {
     const domain = 'ac1ss.ascwefkjw.com'
@@ -58,55 +44,65 @@ db.close((err) => {
     await context.addCookies(cookies);
     const page = await context.newPage();
 
-    await page.goto(baseUrl + mobileTXTPath, { waitUntil: 'domcontentloaded' });
+    await page.goto(baseUrl + mobileTXTPath, { waitUntil: 'load' });
 
     while (true) {
-        await page.waitForSelector('table#threadlisttableid tbody')
+        const threadList = page.locator('table#threadlisttableid tbody');
+        const count = await threadList.count();
 
-        const threadList = await page.$$('table#threadlisttableid tbody');
-
-        for (const thread of threadList) {
-            const id = await thread.getAttribute('id');
+        for (let i = 0; i < count; i++) {
+            const id = await threadList.nth(i).getAttribute('id');
             if (id != null) {
                 if (id.includes("normalthread")) {
-                    const link = await thread.$('a.s.xst');
+                    const link = threadList.nth(i).locator('a.s.xst').first();
                     const href = await link.getAttribute('href');
 
-                    const threadPage = await context.newPage();
-                    await threadPage.goto(baseUrl + href, { waitUntil: 'domcontentloaded' });
-
-                    const titleElement = await threadPage.$('span#thread_subject');
-                    const title = await titleElement.textContent();
-                    console.log(title)
-
-                    const parsedUrl = new URL(threadPage.url());
+                    const parsedUrl = new URL(baseUrl + href);
                     const tid = parsedUrl.searchParams.get('tid');
 
-                    const db = new sqlite3.Database(dbPath, (err) => {
-                        if (err) {
-                            console.error(err);
-                        }
-                    });
+                    if (href.includes('tid=adver')) {
+                        console.log('adver')
+                        continue;
+                    }
 
-                    let exists = false
-                    db.get(`SELECT tid FROM novels WHERE tid = ?`, [tid], (err, row) => {
-                        if (err) {
-                            console.error(err);
-                            return;
-                        }
+                    const db = new Database('./novel.db');
 
-                        if (row) {
-                            exists = true
-                        }
-                    });
+                    const row = db.prepare('SELECT tid FROM novels WHERE tid = ?').get(tid);
 
-                    if (exists) break;
+                    if (row != undefined) {
+                        console.log(tid + '-added')
+                        continue;
+                    }
 
-                    let downloadLink = '';
+                    const threadPage = await context.newPage();
+                    await threadPage.goto(baseUrl + href, { waitUntil: 'load' });
 
-                    const aList = await threadPage.$$('a');
-                    for (const a of aList) {
-                        const href = await a.getAttribute('href')
+                    const fullPageContent = await threadPage.content();
+
+                    if (fullPageContent.includes("您浏览的太快了，歇一会儿吧！")) {
+                        console.warn("too fast");
+                        await wait(60000);
+                        i--;
+                        continue;
+                    }
+
+                    let title = ''
+
+                    try {
+                        let titleElement = threadPage.locator('span#thread_subject').first();
+                        title = await titleElement.textContent();
+                        console.log(title)
+                    } catch (err) {
+                        console.warn("title-loop");
+                        i--;
+                        continue;
+                    }
+
+                    const aList = threadPage.locator('a');
+                    const count = await aList.count();
+
+                    for (let i = 0; i < count; i++) {
+                        const href = await aList.nth(i).getAttribute('href')
                         if (href != null) {
                             if (href.startsWith('forum.php?mod=attachment&aid=')) {
                                 downloadLink = baseUrl + href;
@@ -125,35 +121,36 @@ db.close((err) => {
                         content = iconv.decode(buffer, detected.encoding);
                     }
 
-                    const stmt = db.prepare(`INSERT INTO novels (tid, title, content) VALUES (?, ?, ?)`);
-                    stmt.run(tid, title, content, function (err) {
-                        if (err) {
-                            console.error(err);
-                        }
-                    });
-                    stmt.finalize();
-
-                    db.close((err) => {
-                        if (err) {
-                            console.error(err);
-                        }
-                    });
+                    try {
+                        const stmt = db.prepare(`INSERT INTO novels (tid, title, content) VALUES (?, ?, ?)`);
+                        stmt.run(tid, title, content);
+                    } catch (err) {
+                        console.error(err);
+                    } finally {
+                        db.close();
+                    }
 
                     await threadPage.close()
                 }
             }
         }
 
-        const nextElement = await page.$('a#nxt');
+        const nextElement = page.locator('a.nxt').first();
         if (nextElement == null) {
+            console.log('pass')
             break
         } else {
             const nextPath = await nextElement.getAttribute('href')
             if (nextPath != null) {
-                await page.goto(baseUrl + nextPath, { waitUntil: 'domcontentloaded' })
+                await page.goto(baseUrl + nextPath, { waitUntil: 'load' })
+                console.log(baseUrl + nextPath)
             }
         }
     }
 
     await browser.close();
 })();
+
+function wait(ms) {
+    return new Promise(resolve => setTimeout(resolve, ms));
+}
