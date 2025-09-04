@@ -215,6 +215,10 @@ db.prepare(`
                         console.log(err)
                         continue
                     } finally {
+                        const contentStr = await threadPage.content();
+                        if (contentStr.includes('Discuz! Database Error')) {
+                            continue
+                        }
                         break
                     }
                 }
