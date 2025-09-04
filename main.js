@@ -3,6 +3,7 @@ const iconv = require('iconv-lite');
 const jschardet = require('jschardet');
 const path = require('path');
 const Database = require('better-sqlite3');
+const fs = require('fs')
 
 const dbPath = './novel.db';
 
@@ -19,15 +20,18 @@ db.prepare(`
 (async () => {
     const domain = '3cbg9.sdgvre54q.com'
     const baseUrl = 'https://3cbg9.sdgvre54q.com/'
-    const mobileTXTPath = 'forum.php?mod=forumdisplay&fid=72'
+    const mobileTXTPath = 'forum.php?mod=forumdisplay&fid=40&page=22'
+    const savePath = './downloads'
 
     const browser = await chromium.launch({
         headless: false,
-        proxy: {
-            server: "http://124.94.191.155:40041"
-        }
+        // proxy: {
+        //     server: "http://124.94.191.155:40041"
+        // }
     });
-    const context = await browser.newContext();
+    const context = await browser.newContext({
+        ignoreHTTPSErrors: true
+    });
     const cookieString = `yj0M_eda4_saltkey=Zj2pqQCn; yj0M_eda4_lastvisit=1756258948; yj0M_eda4_lastact=1756262702%09index.php%09; PHPSESSID=ollfild76oisbps0h8shvvnh7l; yj0M_eda4_st_t=2527028%7C1756262620%7C847996d4cad16b3af85a3f76d1da95b6; yj0M_eda4_sendmail=1; yj0M_eda4_ulastactivity=1756262607%7C0; yj0M_eda4_auth=cb86O5Ui0pLJxSEbgg7pzR9RVTGzjUotZC5Bd5e2KlpjlUFN9zqA7ySaR5AApNnLc6aMKhfgwqqd9uXBQDNsDANcbP5C; yj0M_eda4_lastcheckfeed=2527028%7C1756262607; yj0M_eda4_lip=221.6.242.203%2C1756262607; yj0M_eda4_sid=0; yj0M_eda4_forum_lastvisit=D_102_1756262620`;
 
     const cookies = cookieString.split('; ').map(item => {
@@ -46,7 +50,20 @@ db.prepare(`
     await context.addCookies(cookies);
     const page = await context.newPage();
 
-    await page.goto(baseUrl + mobileTXTPath, { waitUntil: 'load', timeout: 0 });
+    while (true) {
+        try {
+            await page.goto(baseUrl + mobileTXTPath, { waitUntil: 'load' });
+        } catch (err) {
+            console.log(err)
+            if (err.message.includes('Timeout')) {
+                await wait(60000)
+                continue
+            }
+        } finally {
+            break
+        }
+    }
+
 
     while (true) {
         const threadList = page.locator('table#threadlisttableid tbody');
@@ -75,50 +92,102 @@ db.prepare(`
                     }
 
                     const threadPage = await context.newPage();
-                    await threadPage.goto(baseUrl + href, { waitUntil: 'load', timeout: 0 });
+                    try {
+                        await threadPage.goto(baseUrl + href, { waitUntil: 'load' });
+                    } catch (err) {
+                        console.log(err)
+                        threadPage.close()
+                        i--
+                        continue
+                    }
+
 
                     const fullPageContent = await threadPage.content();
 
-                    if (fullPageContent.includes("您浏览的太快了，歇一会儿吧！")) {
+                    if (fullPageContent.includes('您浏览的太快了，歇一会儿吧！')) {
                         console.warn("too fast");
                         await wait(60000);
+                        threadPage.close()
                         i--;
+                        continue;
+                    } else if (fullPageContent.includes('Discuz! Database Error') ||
+                        fullPageContent.includes('没有找到帖子')) {
+                        console.warn("no topic");
+                        threadPage.close()
                         continue;
                     }
 
                     let title = ''
 
-                    let titleElement = threadPage.locator('span#thread_subject').first();
-                    title = await titleElement.textContent();
-                    console.log(title)
+                    try {
+                        let titleElement = threadPage.locator('span#thread_subject').first();
+                        title = await titleElement.textContent();
+                        console.log(title)
+                    } catch (err) {
+                        console.log(err)
+                        if (err.message.includes('Timeout')) {
+                            await wait(60000)
+                        }
+                        threadPage.close()
+                        i--
+                        continue
+                    }
+
 
                     const aList = threadPage.locator('div.pcb:first-of-type a');
                     const count = await aList.count();
-                    let content = ''
 
                     for (let i = 0; i < count; i++) {
                         const href = await aList.nth(i).getAttribute('href')
                         if (href != null) {
                             if (href.startsWith('forum.php?mod=attachment&aid=')) {
                                 downloadLink = baseUrl + href;
-                                const response = await threadPage.request.get(downloadLink, { setTimeout: 6000000 });
-                                const buffer = await response.body();
 
-                                const detected = jschardet.detect(buffer);
-                                let encoding = (detected.encoding || "utf-8").toLowerCase();
-
-                                if (encoding === "gb2312" || encoding === "gbk") {
-                                    encoding = "gb18030";
+                                var response
+                                while (true) {
+                                    try {
+                                        response = await threadPage.request.get(downloadLink);
+                                    } catch (err) {
+                                        console.log(err)
+                                        if (error.message.includes('ERR_CONNECTION_TIMED_OUT')) {
+                                            await wait(60000)
+                                        }
+                                    } finally {
+                                        break
+                                    }
                                 }
 
-                                const content = iconv.decode(buffer, encoding);
+
+                                const contentType = response.headers()['content-type'];
+                                const contentDisposition = response.headers()['content-disposition'];
+                                let filename = '';
+
+                                if (contentDisposition) {
+                                    const filenameMatch = contentDisposition.match(/filename="?(.+)"?/);
+                                    if (filenameMatch && filenameMatch[1]) {
+                                        filename = filenameMatch[1];
+                                    }
+                                } else {
+                                    i--
+                                    continue
+                                }
+
+                                filename = filename.replace(/[\\/:*?"<>|]/g, "_");
+
+                                const targetDir = savePath + '/' + tid
+                                fs.mkdirSync(targetDir, { recursive: true });
+
+                                const buffer = await response.body();
+
+                                const filePath = path.resolve(targetDir, filename);
+                                fs.writeFileSync(filePath, buffer);
                             }
                         }
                     }
 
                     try {
                         const stmt = db.prepare(`INSERT INTO novels (tid, title, content) VALUES (?, ?, ?)`);
-                        stmt.run(tid, title, content);
+                        stmt.run(tid, title, '');
                     } catch (err) {
                         console.error(err);
                     }
@@ -135,7 +204,16 @@ db.prepare(`
         } else {
             const nextPath = await nextElement.getAttribute('href')
             if (nextPath != null) {
-                await page.goto(baseUrl + nextPath, { waitUntil: 'load', timeout: 0 })
+                while (true) {
+                    try {
+                        await page.goto(baseUrl + nextPath, { waitUntil: 'load' })
+                    } catch (err) {
+                        console.log(err)
+                        continue
+                    } finally {
+                        break
+                    }
+                }
                 console.log(baseUrl + nextPath)
             }
         }
