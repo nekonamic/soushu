@@ -17,18 +17,18 @@ db.prepare(`
 `).run();
 
 (async () => {
-    const domain = 'ac1ss.ascwefkjw.com'
-    const baseUrl = 'https://ac1ss.ascwefkjw.com/'
+    const domain = '3cbg9.sdgvre54q.com'
+    const baseUrl = 'https://3cbg9.sdgvre54q.com/'
     const mobileTXTPath = 'forum.php?mod=forumdisplay&fid=72'
 
     const browser = await chromium.launch({
-        headless: true,
+        headless: false,
         proxy: {
-            server: "http://127.0.0.1:7890"
+            server: "http://124.94.191.155:40041"
         }
     });
     const context = await browser.newContext();
-    const cookieString = `PHPSESSID=fehap6pvv43kuu7r4foskqi2dp; yj0M_5a0c_saltkey=FEBk1Iww; yj0M_5a0c_lastvisit=1756033217; yj0M_5a0c_lastact=1756037036%09index.php%09; yj0M_5a0c_st_t=0%7C1756036817%7Cabc85afee8e05d695b2929267559e611; yj0M_5a0c_sendmail=1; yj0M_5a0c_ulastactivity=1756037036%7C0; yj0M_5a0c_auth=fd77dVk912FxISusbqKRBKVlMjs03ZZkRYjdjkPWvFCSiZRwhxuZbdKDf2tWbf%2FUKYjlllF4mmvMaW2ssR09ck9desRe; yj0M_5a0c_lastcheckfeed=2527028%7C1756037036; yj0M_5a0c_checkfollow=1; yj0M_5a0c_lip=47.79.94.249%2C1756037036; yj0M_5a0c_sid=0`;
+    const cookieString = `yj0M_eda4_saltkey=Zj2pqQCn; yj0M_eda4_lastvisit=1756258948; yj0M_eda4_lastact=1756262702%09index.php%09; PHPSESSID=ollfild76oisbps0h8shvvnh7l; yj0M_eda4_st_t=2527028%7C1756262620%7C847996d4cad16b3af85a3f76d1da95b6; yj0M_eda4_sendmail=1; yj0M_eda4_ulastactivity=1756262607%7C0; yj0M_eda4_auth=cb86O5Ui0pLJxSEbgg7pzR9RVTGzjUotZC5Bd5e2KlpjlUFN9zqA7ySaR5AApNnLc6aMKhfgwqqd9uXBQDNsDANcbP5C; yj0M_eda4_lastcheckfeed=2527028%7C1756262607; yj0M_eda4_lip=221.6.242.203%2C1756262607; yj0M_eda4_sid=0; yj0M_eda4_forum_lastvisit=D_102_1756262620`;
 
     const cookies = cookieString.split('; ').map(item => {
         const [name, ...rest] = item.split('=');
@@ -92,16 +92,6 @@ db.prepare(`
                     title = await titleElement.textContent();
                     console.log(title)
 
-                    // try {
-                    //     let titleElement = threadPage.locator('span#thread_subject').first();
-                    //     title = await titleElement.textContent();
-                    //     console.log(title)
-                    // } catch (err) {
-                    //     console.warn("title-loop");
-                    //     i--;
-                    //     continue;
-                    // }
-
                     const aList = threadPage.locator('div.pcb:first-of-type a');
                     const count = await aList.count();
                     let content = ''
@@ -122,11 +112,6 @@ db.prepare(`
                                 }
 
                                 const content = iconv.decode(buffer, encoding);
-                                // if (detected.encoding == 'UTF-8') {
-                                //     content += '\n' + iconv.decode(buffer, 'UTF-8');
-                                // } else {
-                                //     content += '\n' + iconv.decode(buffer, 'GB18030');
-                                // }
                             }
                         }
                     }
