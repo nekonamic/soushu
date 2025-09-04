@@ -110,6 +110,15 @@ db.prepare(`
                         threadPage.close()
                         i--;
                         continue;
+                    } else if (fullPageContent.includes('没有找到帖子')) {
+                        console.warn("no topic");
+                        threadPage.close()
+                        continue;
+                    } else if (fullPageContent.includes('Discuz! Database Error')) {
+                        console.warn("db error");
+                        threadPage.close()
+                        i--;
+                        continue;
                     }
 
                     let title = ''
@@ -119,12 +128,6 @@ db.prepare(`
                         title = await titleElement.textContent();
                         console.log(title)
                     } catch (err) {
-                        if (fullPageContent.includes('Discuz! Database Error') ||
-                            fullPageContent.includes('没有找到帖子')) {
-                            console.warn("no topic");
-                            threadPage.close()
-                            continue;
-                        }
                         console.log(err)
                         if (err.message.includes('Timeout')) {
                             await wait(60000)
