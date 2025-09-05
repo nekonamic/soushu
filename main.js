@@ -20,7 +20,7 @@ db.prepare(`
 (async () => {
     const domain = '3cbg9.sdgvre54q.com'
     const baseUrl = 'https://3cbg9.sdgvre54q.com/'
-    const mobileTXTPath = 'forum.php?mod=forumdisplay&fid=40&page=32'
+    const mobileTXTPath = 'forum.php?mod=forumdisplay&fid=40&page=35'
     const savePath = './downloads'
 
     const browser = await chromium.launch({
@@ -55,10 +55,7 @@ db.prepare(`
             await page.goto(baseUrl + mobileTXTPath, { waitUntil: 'domcontentloaded', timeout: 10000 });
         } catch (err) {
             console.log(err)
-            if (err.message.includes('Timeout')) {
-                await wait(60000)
-                continue
-            }
+            page = await context.newPage();
         } finally {
             break
         }
@@ -137,6 +134,14 @@ db.prepare(`
 
                     const aList = threadPage.locator('div.pcb:first-of-type a');
                     const count = await aList.count();
+                    try {
+                        const test = await aList.nth(i).getAttribute('href')
+                    } catch (err) {
+                        console.log(err)
+                        threadPage.close()
+                        i--
+                        continue
+                    }
 
                     for (let i = 0; i < count; i++) {
                         const href = await aList.nth(i).getAttribute('href')
@@ -150,9 +155,6 @@ db.prepare(`
                                         response = await threadPage.request.get(downloadLink);
                                     } catch (err) {
                                         console.log(err)
-                                        if (error.message.includes('ERR_CONNECTION_TIMED_OUT')) {
-                                            await wait(60000)
-                                        }
                                     } finally {
                                         break
                                     }
@@ -212,7 +214,8 @@ db.prepare(`
                         contentStr = await page.content();
                     } catch (err) {
                         console.log(err)
-                        continue
+                        page.close()
+                        page = await context.newPage();
                     } finally {
                         if (contentStr.includes('Database Error')) {
                             continue
