@@ -20,7 +20,7 @@ db.prepare(`
 (async () => {
     const domain = '3cbg9.sdgvre54q.com'
     const baseUrl = 'https://3cbg9.sdgvre54q.com/'
-    const mobileTXTPath = 'forum.php?mod=forumdisplay&fid=40&page=36'
+    const mobileTXTPath = 'forum.php?mod=forumdisplay&fid=100&page=2'
     const savePath = './downloads'
 
     const browser = await chromium.launch({
@@ -49,17 +49,18 @@ db.prepare(`
     const blankPage = await context.newPage();
 
     await context.addCookies(cookies);
-    const page = await context.newPage();
+    let page = await context.newPage();
 
     while (true) {
         try {
-            await page.goto(baseUrl + mobileTXTPath, { waitUntil: 'domcontentloaded', timeout: 10000 });
+            await page.goto(baseUrl + mobileTXTPath, { waitUntil: 'domcontentloaded', timeout: 3000 });
         } catch (err) {
             console.log(err)
+            await page.close()
             page = await context.newPage();
-        } finally {
-            break
+            continue
         }
+        break
     }
 
 
@@ -94,7 +95,7 @@ db.prepare(`
                         await threadPage.goto(baseUrl + href, { waitUntil: 'domcontentloaded', timeout: 10000 });
                     } catch (err) {
                         console.log(err)
-                        threadPage.close()
+                        await threadPage.close()
                         i--
                         continue
                     }
@@ -105,16 +106,16 @@ db.prepare(`
                     if (fullPageContent.includes('您浏览的太快了，歇一会儿吧！')) {
                         console.warn("too fast");
                         await wait(60000);
-                        threadPage.close()
+                        await threadPage.close()
                         i--;
                         continue;
                     } else if (fullPageContent.includes('没有找到帖子')) {
                         console.warn("no topic");
-                        threadPage.close()
+                        await threadPage.close()
                         continue;
                     } else if (fullPageContent.includes('Database Error')) {
                         console.warn("db error");
-                        threadPage.close()
+                        await threadPage.close()
                         i--;
                         continue;
                     }
@@ -127,7 +128,7 @@ db.prepare(`
                         console.log(title)
                     } catch (err) {
                         console.log(err)
-                        threadPage.close()
+                        await threadPage.close()
                         i--
                         continue
                     }
@@ -135,11 +136,15 @@ db.prepare(`
 
                     const aList = threadPage.locator('div.pcb:first-of-type a');
                     const count = await aList.count();
+                    if (count == 0) {
+                        threadPage.close()
+                        continue
+                    }
                     try {
                         const test = await aList.nth(0).getAttribute('href')
                     } catch (err) {
                         console.log(err)
-                        threadPage.close()
+                        await threadPage.close()
                         i--
                         continue
                     }
@@ -156,15 +161,18 @@ db.prepare(`
                                         response = await threadPage.request.get(downloadLink);
                                     } catch (err) {
                                         console.log(err)
-                                    } finally {
-                                        break
+                                        const buffer = await response.body();
+                                        console.log(buffer)
+                                        continue
                                     }
+                                    break
                                 }
 
 
                                 const contentType = response.headers()['content-type'];
                                 const contentDisposition = response.headers()['content-disposition'];
                                 let filename = '';
+                                const buffer = await response.body();
 
                                 if (contentDisposition) {
                                     const filenameMatch = contentDisposition.match(/filename="?(.+)"?/);
@@ -172,6 +180,9 @@ db.prepare(`
                                         filename = filenameMatch[1];
                                     }
                                 } else {
+                                    if (buffer.toString().includes('Discuz! System Error')) {
+                                        break
+                                    }
                                     i--
                                     continue
                                 }
@@ -181,7 +192,7 @@ db.prepare(`
                                 const targetDir = savePath + '/' + tid
                                 fs.mkdirSync(targetDir, { recursive: true });
 
-                                const buffer = await response.body();
+                                // const buffer = await response.body();
 
                                 const filePath = path.resolve(targetDir, filename);
                                 fs.writeFileSync(filePath, buffer);
@@ -215,14 +226,14 @@ db.prepare(`
                         contentStr = await page.content();
                     } catch (err) {
                         console.log(err)
-                        page.close()
+                        await page.close()
                         page = await context.newPage();
-                    } finally {
-                        if (contentStr.includes('Database Error')) {
-                            continue
-                        }
-                        break
+                        continue
                     }
+                    if (contentStr.includes('Database Error')) {
+                        continue
+                    }
+                    break
                 }
                 console.log(baseUrl + nextPath)
             }
