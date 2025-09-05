@@ -20,7 +20,7 @@ db.prepare(`
 (async () => {
     const domain = '3cbg9.sdgvre54q.com'
     const baseUrl = 'https://3cbg9.sdgvre54q.com/'
-    const mobileTXTPath = 'forum.php?mod=forumdisplay&fid=40&page=22'
+    const mobileTXTPath = 'forum.php?mod=forumdisplay&fid=40&page=32'
     const savePath = './downloads'
 
     const browser = await chromium.launch({
@@ -52,7 +52,7 @@ db.prepare(`
 
     while (true) {
         try {
-            await page.goto(baseUrl + mobileTXTPath, { waitUntil: 'load' });
+            await page.goto(baseUrl + mobileTXTPath, { waitUntil: 'domcontentloaded', timeout: 10000 });
         } catch (err) {
             console.log(err)
             if (err.message.includes('Timeout')) {
@@ -93,7 +93,7 @@ db.prepare(`
 
                     const threadPage = await context.newPage();
                     try {
-                        await threadPage.goto(baseUrl + href, { waitUntil: 'load' });
+                        await threadPage.goto(baseUrl + href, { waitUntil: 'domcontentloaded', timeout: 10000 });
                     } catch (err) {
                         console.log(err)
                         threadPage.close()
@@ -114,7 +114,7 @@ db.prepare(`
                         console.warn("no topic");
                         threadPage.close()
                         continue;
-                    } else if (fullPageContent.includes('Discuz! Database Error')) {
+                    } else if (fullPageContent.includes('Database Error')) {
                         console.warn("db error");
                         threadPage.close()
                         i--;
@@ -129,9 +129,6 @@ db.prepare(`
                         console.log(title)
                     } catch (err) {
                         console.log(err)
-                        if (err.message.includes('Timeout')) {
-                            await wait(60000)
-                        }
                         threadPage.close()
                         i--
                         continue
@@ -207,16 +204,17 @@ db.prepare(`
             break
         } else {
             const nextPath = await nextElement.getAttribute('href')
+            var contentStr = ''
             if (nextPath != null) {
                 while (true) {
                     try {
-                        await page.goto(baseUrl + nextPath, { waitUntil: 'load' })
+                        await page.goto(baseUrl + nextPath, { waitUntil: 'domcontentloaded', timeout: 10000 })
+                        contentStr = await page.content();
                     } catch (err) {
                         console.log(err)
                         continue
                     } finally {
-                        const contentStr = await threadPage.content();
-                        if (contentStr.includes('Discuz! Database Error')) {
+                        if (contentStr.includes('Database Error')) {
                             continue
                         }
                         break
