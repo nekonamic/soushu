@@ -20,7 +20,7 @@ db.prepare(`
 (async () => {
     const domain = '3cbg9.sdgvre54q.com'
     const baseUrl = 'https://3cbg9.sdgvre54q.com/'
-    const mobileTXTPath = 'forum.php?mod=forumdisplay&fid=40&page=35'
+    const mobileTXTPath = 'forum.php?mod=forumdisplay&fid=40&page=36'
     const savePath = './downloads'
 
     const browser = await chromium.launch({
@@ -46,6 +46,7 @@ db.prepare(`
             secure: false,
         };
     });
+    const blankPage = await context.newPage();
 
     await context.addCookies(cookies);
     const page = await context.newPage();
