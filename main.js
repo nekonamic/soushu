@@ -20,7 +20,7 @@ db.prepare(`
 (async () => {
     const domain = '3cbg9.sdgvre54q.com'
     const baseUrl = 'https://3cbg9.sdgvre54q.com/'
-    const mobileTXTPath = 'forum.php?mod=forumdisplay&fid=100&page=2'
+    const mobileTXTPath = 'forum.php?mod=forumdisplay&fid=102'
     const savePath = './downloads'
 
     const browser = await chromium.launch({
@@ -53,7 +53,7 @@ db.prepare(`
 
     while (true) {
         try {
-            await page.goto(baseUrl + mobileTXTPath, { waitUntil: 'domcontentloaded', timeout: 3000 });
+            await page.goto(baseUrl + mobileTXTPath, { waitUntil: 'domcontentloaded', timeout: 10000 });
         } catch (err) {
             console.log(err)
             await page.close()
