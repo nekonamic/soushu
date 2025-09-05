@@ -135,7 +135,7 @@ db.prepare(`
                     const aList = threadPage.locator('div.pcb:first-of-type a');
                     const count = await aList.count();
                     try {
-                        const test = await aList.nth(i).getAttribute('href')
+                        const test = await aList.nth(0).getAttribute('href')
                     } catch (err) {
                         console.log(err)
                         threadPage.close()
