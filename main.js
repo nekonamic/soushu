@@ -20,7 +20,7 @@ db.prepare(`
 (async () => {
     const domain = '3cbg9.sdgvre54q.com'
     const baseUrl = 'https://3cbg9.sdgvre54q.com/'
-    const mobileTXTPath = 'forum.php?mod=forumdisplay&fid=102'
+    const mobileTXTPath = 'forum.php?mod=forumdisplay&fid=102&page=14'
     const savePath = './downloads'
 
     const browser = await chromium.launch({
@@ -53,7 +53,7 @@ db.prepare(`
 
     while (true) {
         try {
-            await page.goto(baseUrl + mobileTXTPath, { waitUntil: 'domcontentloaded', timeout: 10000 });
+            await page.goto(baseUrl + mobileTXTPath, { waitUntil: 'domcontentloaded', timeout: 20000 });
         } catch (err) {
             console.log(err)
             await page.close()
@@ -92,7 +92,7 @@ db.prepare(`
 
                     const threadPage = await context.newPage();
                     try {
-                        await threadPage.goto(baseUrl + href, { waitUntil: 'domcontentloaded', timeout: 10000 });
+                        await threadPage.goto(baseUrl + href, { waitUntil: 'domcontentloaded', timeout: 20000 });
                     } catch (err) {
                         console.log(err)
                         await threadPage.close()
@@ -161,8 +161,6 @@ db.prepare(`
                                         response = await threadPage.request.get(downloadLink);
                                     } catch (err) {
                                         console.log(err)
-                                        const buffer = await response.body();
-                                        console.log(buffer)
                                         continue
                                     }
                                     break
@@ -222,7 +220,7 @@ db.prepare(`
             if (nextPath != null) {
                 while (true) {
                     try {
-                        await page.goto(baseUrl + nextPath, { waitUntil: 'domcontentloaded', timeout: 10000 })
+                        await page.goto(baseUrl + nextPath, { waitUntil: 'domcontentloaded', timeout: 20000 })
                         contentStr = await page.content();
                     } catch (err) {
                         console.log(err)
