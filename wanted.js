@@ -3,7 +3,7 @@ const path = require('path');
 const Database = require('better-sqlite3');
 const fs = require('fs')
 
-const dbPath = './novel.db';
+const dbPath = './wanted.db';
 
 const db = new Database(dbPath);
 
@@ -18,11 +18,11 @@ db.prepare(`
 (async () => {
     const domain = '3cbg9.sdgvre54q.com'
     const baseUrl = 'https://3cbg9.sdgvre54q.com/'
-    const mobileTXTPath = 'forum.php?mod=forumdisplay&fid=40&page=119'
-    const savePath = './downloads'
+    const mobileTXTPath = 'forum.php?mod=forumdisplay&fid=51'
+    const savePath = './wanted-downloads'
 
     const browser = await chromium.launch({
-        headless: true,
+        headless: false,
         proxy: {
             server: "http://127.0.0.1:7891"
         }
@@ -68,8 +68,9 @@ db.prepare(`
 
         for (let i = 0; i < count; i++) {
             const id = await threadList.nth(i).getAttribute('id');
-            if (id != null) {
-                if (id.includes("normalthread")) {
+            const threadText = await threadList.nth(i).textContent()
+            if (id != null && threadText != null) {
+                if (id.includes("normalthread") && threadText.includes("[已解决]")) {
                     const link = threadList.nth(i).locator('a.s.xst').first();
                     const href = await link.getAttribute('href');
 
@@ -132,7 +133,7 @@ db.prepare(`
                     }
 
 
-                    const aList = threadPage.locator('div.pcb:nth-child(1) a');
+                    const aList = threadPage.locator('div.pcb:nth-child(2) a');
                     const count = await aList.count();
                     if (count == 0) {
                         threadPage.close()
