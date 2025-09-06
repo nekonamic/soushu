@@ -18,7 +18,7 @@ db.prepare(`
 (async () => {
     const domain = '3cbg9.sdgvre54q.com'
     const baseUrl = 'https://3cbg9.sdgvre54q.com/'
-    const mobileTXTPath = 'forum.php?mod=forumdisplay&fid=51'
+    const mobileTXTPath = 'forum.php?mod=forumdisplay&fid=51&page=5'
     const savePath = './wanted-downloads'
 
     const browser = await chromium.launch({

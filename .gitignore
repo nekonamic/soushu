@@ -3,3 +3,6 @@ node_modules/
 pnpm-lock.yaml
 pnpm-workspace.yaml
 downloads
+wanted-downloads
+wanted.db
+cache.db

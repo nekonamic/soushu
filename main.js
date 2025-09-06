@@ -2,6 +2,7 @@ const { chromium } = require('playwright');
 const path = require('path');
 const Database = require('better-sqlite3');
 const fs = require('fs')
+const axios = require('axios');
 
 const dbPath = './novel.db';
 
@@ -15,17 +16,46 @@ db.prepare(`
     )
 `).run();
 
+let currentProxy = 0
+
+async function countError() {
+    try {
+        currentProxy++
+        currentProxy = currentProxy % 116
+        const url = `http://127.0.0.1:59999/proxies/selected`;
+
+        const res = await axios.put(
+            url,
+            { name: currentProxy.toString() },
+            {
+                headers: {
+                    "Content-Type": "application/json",
+                },
+                validateStatus: () => true,
+            }
+        );
+
+        if (res.status === 204) {
+            console.log("proxy changed", currentProxy);
+        } else {
+            console.error("change proxy error http", res.data);
+        }
+    } catch (err) {
+        console.error("change proxy error:", err.message);
+    }
+}
+
 (async () => {
     const domain = '3cbg9.sdgvre54q.com'
     const baseUrl = 'https://3cbg9.sdgvre54q.com/'
-    const mobileTXTPath = 'forum.php?mod=forumdisplay&fid=40&page=119'
+    const mobileTXTPath = 'forum.php?mod=forumdisplay&fid=40&page=144'
     const savePath = './downloads'
 
     const browser = await chromium.launch({
-        headless: true,
-        // proxy: {
-        //     server: "http://127.0.0.1:7891"
-        // }
+        headless: false,
+        proxy: {
+            server: "http://127.0.0.1:60000"
+        }
     });
     const context = await browser.newContext({
         ignoreHTTPSErrors: true
@@ -53,6 +83,7 @@ db.prepare(`
         try {
             await page.goto(baseUrl + mobileTXTPath, { waitUntil: 'domcontentloaded', timeout: 20000 });
         } catch (err) {
+            countError()
             console.log(err)
             await page.close()
             page = await context.newPage();
@@ -92,6 +123,7 @@ db.prepare(`
                     try {
                         await threadPage.goto(baseUrl + href, { waitUntil: 'domcontentloaded', timeout: 20000 });
                     } catch (err) {
+                        countError()
                         console.log(err)
                         await threadPage.close()
                         i--
@@ -125,6 +157,7 @@ db.prepare(`
                         title = await titleElement.textContent();
                         console.log(title)
                     } catch (err) {
+                        countError()
                         console.log(err)
                         await threadPage.close()
                         i--
@@ -146,8 +179,9 @@ db.prepare(`
                                     var response
                                     while (true) {
                                         try {
-                                            response = await threadPage.request.get(downloadLink);
+                                            response = await threadPage.request.get(downloadLink, { timeout: 20000 });
                                         } catch (err) {
+                                            countError()
                                             console.log(err)
                                             continue
                                         }
@@ -196,6 +230,7 @@ db.prepare(`
                             const stmt = db.prepare(`INSERT INTO novels (tid, title, content) VALUES (?, ?, ?)`);
                             stmt.run(tid, title, '');
                         } catch (err) {
+                            countError()
                             console.error(err);
                         }
                     }
@@ -218,6 +253,7 @@ db.prepare(`
                         await page.goto(baseUrl + nextPath, { waitUntil: 'domcontentloaded', timeout: 20000 })
                         contentStr = await page.content();
                     } catch (err) {
+                        countError()
                         console.log(err)
                         await page.close()
                         page = await context.newPage();
