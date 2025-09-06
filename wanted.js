@@ -24,7 +24,7 @@ db.prepare(`
     const browser = await chromium.launch({
         headless: true,
         proxy: {
-            server: "http://127.0.0.1:7890"
+            server: "http://127.0.0.1:7891"
         }
     });
     const context = await browser.newContext({
@@ -135,72 +135,72 @@ db.prepare(`
 
                     const aList = threadPage.locator('div.pcb').nth(1).locator('a');
                     const count = await aList.count();
-                    try {
-                        const test = await aList.nth(0).getAttribute('href')
-                    } catch (err) {
-                        console.log(err)
-                        await threadPage.close()
-                        i--
-                        continue
-                    }
 
-                    for (let i = 0; i < count; i++) {
-                        const href = await aList.nth(i).getAttribute('href')
-                        if (href != null) {
-                            if (href.startsWith('forum.php?mod=attachment&aid=')) {
-                                downloadLink = baseUrl + href;
+                    let fileCount = 0
 
-                                var response
-                                while (true) {
-                                    try {
-                                        response = await threadPage.request.get(downloadLink);
-                                    } catch (err) {
-                                        console.log(err)
+                    if (count != 0) {
+                        for (let i = 0; i < count; i++) {
+                            const href = await aList.nth(i).getAttribute('href')
+                            if (href != null) {
+                                if (href.startsWith('forum.php?mod=attachment&aid=')) {
+                                    downloadLink = baseUrl + href;
+
+                                    var response
+                                    while (true) {
+                                        try {
+                                            response = await threadPage.request.get(downloadLink);
+                                        } catch (err) {
+                                            console.log(err)
+                                            continue
+                                        }
+                                        break
+                                    }
+
+
+                                    const contentType = response.headers()['content-type'];
+                                    const contentDisposition = response.headers()['content-disposition'];
+                                    let filename = '';
+                                    const buffer = await response.body();
+
+                                    if (contentDisposition) {
+                                        const filenameMatch = contentDisposition.match(/filename="?(.+)"?/);
+                                        if (filenameMatch && filenameMatch[1]) {
+                                            filename = filenameMatch[1];
+                                        }
+                                    } else {
+                                        if (buffer.toString().includes('Discuz! System Error')) {
+                                            break
+                                        } else if (buffer.toString().includes('您浏览的太快了，歇一会儿吧！')) {
+                                            await wait(60000)
+                                            console.log('too fast')
+                                        }
+                                        i--
                                         continue
                                     }
-                                    break
+
+                                    filename = filename.replace(/[\\/:*?"<>|]/g, "_");
+
+                                    const targetDir = savePath + '/' + tid
+                                    fs.mkdirSync(targetDir, { recursive: true });
+
+                                    // const buffer = await response.body();
+
+                                    const filePath = path.resolve(targetDir, filename);
+                                    fs.writeFileSync(filePath, buffer);
+                                    fileCount++
                                 }
-
-
-                                const contentType = response.headers()['content-type'];
-                                const contentDisposition = response.headers()['content-disposition'];
-                                let filename = '';
-                                const buffer = await response.body();
-
-                                if (contentDisposition) {
-                                    const filenameMatch = contentDisposition.match(/filename="?(.+)"?/);
-                                    if (filenameMatch && filenameMatch[1]) {
-                                        filename = filenameMatch[1];
-                                    }
-                                } else {
-                                    if (buffer.toString().includes('Discuz! System Error')) {
-                                        break
-                                    } else if (buffer.toString().includes('您浏览的太快了，歇一会儿吧！')) {
-                                        await wait(60000)
-                                        console.log('too fast')
-                                    }
-                                    i--
-                                    continue
-                                }
-
-                                filename = filename.replace(/[\\/:*?"<>|]/g, "_");
-
-                                const targetDir = savePath + '/' + tid
-                                fs.mkdirSync(targetDir, { recursive: true });
-
-                                // const buffer = await response.body();
-
-                                const filePath = path.resolve(targetDir, filename);
-                                fs.writeFileSync(filePath, buffer);
                             }
                         }
+
                     }
 
-                    try {
-                        const stmt = db.prepare(`INSERT INTO novels (tid, title, content) VALUES (?, ?, ?)`);
-                        stmt.run(tid, title, '');
-                    } catch (err) {
-                        console.error(err);
+                    if (fileCount != 0) {
+                        try {
+                            const stmt = db.prepare(`INSERT INTO novels (tid, title, content) VALUES (?, ?, ?)`);
+                            stmt.run(tid, title, '');
+                        } catch (err) {
+                            console.error(err);
+                        }
                     }
 
                     await threadPage.close()
