@@ -132,8 +132,9 @@ db.prepare(`
                     }
 
 
-                    const aList = threadPage.locator('div.pcb:nth-child(1) a');
+                    const aList = threadPage.locator('div.pcb').first().locator('a');
                     const count = await aList.count();
+                    console.log('file count: ' + count)
                     if (count == 0) {
                         threadPage.close()
                         continue

@@ -22,7 +22,7 @@ db.prepare(`
     const savePath = './wanted-downloads'
 
     const browser = await chromium.launch({
-        headless: false,
+        headless: true,
         proxy: {
             server: "http://127.0.0.1:7891"
         }
@@ -133,8 +133,9 @@ db.prepare(`
                     }
 
 
-                    const aList = threadPage.locator('div.pcb:nth-child(2) a');
+                    const aList = threadPage.locator('div.pcb').nth(1).locator('a');
                     const count = await aList.count();
+                    console.log('file count: ' + count)
                     if (count == 0) {
                         threadPage.close()
                         continue
