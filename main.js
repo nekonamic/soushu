@@ -23,9 +23,9 @@ db.prepare(`
 
     const browser = await chromium.launch({
         headless: true,
-        proxy: {
-            server: "http://127.0.0.1:7891"
-        }
+        // proxy: {
+        //     server: "http://127.0.0.1:7891"
+        // }
     });
     const context = await browser.newContext({
         ignoreHTTPSErrors: true
@@ -134,11 +134,6 @@ db.prepare(`
 
                     const aList = threadPage.locator('div.pcb').first().locator('a');
                     const count = await aList.count();
-                    console.log('file count: ' + count)
-                    if (count == 0) {
-                        threadPage.close()
-                        continue
-                    }
                     try {
                         const test = await aList.nth(0).getAttribute('href')
                     } catch (err) {
