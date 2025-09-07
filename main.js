@@ -17,16 +17,25 @@ db.prepare(`
 `).run();
 
 let currentProxy = 0
+let errorCount = 0
 
 async function countError() {
+    let useProxy = ""
     try {
-        currentProxy++
-        currentProxy = currentProxy % 116
+        errorCount++
+        if (errorCount == 10) {
+            errorCount = 0
+            useProxy = "direct"
+        } else {
+            currentProxy++
+            currentProxy = currentProxy % 116
+            useProxy = currentProxy.toString()
+        }
         const url = `http://127.0.0.1:59999/proxies/selected`;
 
         const res = await axios.put(
             url,
-            { name: currentProxy.toString() },
+            { name: useProxy },
             {
                 headers: {
                     "Content-Type": "application/json",
@@ -36,7 +45,7 @@ async function countError() {
         );
 
         if (res.status === 204) {
-            console.log("proxy changed", currentProxy);
+            console.log("proxy changed", useProxy);
         } else {
             console.error("change proxy error http", res.data);
         }
@@ -48,7 +57,7 @@ async function countError() {
 (async () => {
     const domain = '3cbg9.sdgvre54q.com'
     const baseUrl = 'https://3cbg9.sdgvre54q.com/'
-    const mobileTXTPath = 'forum.php?mod=forumdisplay&fid=40&page=144'
+    const mobileTXTPath = 'forum.php?mod=forumdisplay&fid=40&page=304'
     const savePath = './downloads'
 
     const browser = await chromium.launch({
