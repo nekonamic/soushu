@@ -57,7 +57,7 @@ async function countError() {
 (async () => {
     const domain = '3cbg9.sdgvre54q.com'
     const baseUrl = 'https://3cbg9.sdgvre54q.com/'
-    const mobileTXTPath = 'forum.php?mod=forumdisplay&fid=40&page=304'
+    const mobileTXTPath = 'forum.php?mod=forumdisplay&fid=40&page=307'
     const savePath = './downloads'
 
     const browser = await chromium.launch({
@@ -90,7 +90,7 @@ async function countError() {
 
     while (true) {
         try {
-            await page.goto(baseUrl + mobileTXTPath, { waitUntil: 'domcontentloaded', timeout: 20000 });
+            await page.goto(baseUrl + mobileTXTPath, { waitUntil: 'domcontentloaded', timeout: 5000 });
         } catch (err) {
             countError()
             console.log(err)
@@ -130,7 +130,7 @@ async function countError() {
 
                     const threadPage = await context.newPage();
                     try {
-                        await threadPage.goto(baseUrl + href, { waitUntil: 'domcontentloaded', timeout: 20000 });
+                        await threadPage.goto(baseUrl + href, { waitUntil: 'domcontentloaded', timeout: 5000 });
                     } catch (err) {
                         countError()
                         console.log(err)
@@ -188,7 +188,7 @@ async function countError() {
                                     var response
                                     while (true) {
                                         try {
-                                            response = await threadPage.request.get(downloadLink, { timeout: 20000 });
+                                            response = await threadPage.request.get(downloadLink, { timeout: 5000 });
                                         } catch (err) {
                                             countError()
                                             console.log(err)
@@ -259,7 +259,7 @@ async function countError() {
             if (nextPath != null) {
                 while (true) {
                     try {
-                        await page.goto(baseUrl + nextPath, { waitUntil: 'domcontentloaded', timeout: 20000 })
+                        await page.goto(baseUrl + nextPath, { waitUntil: 'domcontentloaded', timeout: 5000 })
                         contentStr = await page.content();
                     } catch (err) {
                         countError()
