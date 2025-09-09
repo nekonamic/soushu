@@ -58,7 +58,7 @@ async function countError() {
 (async () => {
     const domain = '3cbg9.sdgvre54q.com'
     const baseUrl = 'https://3cbg9.sdgvre54q.com/'
-    const mobileTXTPath = 'forum.php?mod=forumdisplay&fid=102&page=252'
+    const mobileTXTPath = 'forum.php?mod=forumdisplay&fid=102&page=276'
     const savePath = './downloads'
 
     const browser = await chromium.launch({
@@ -145,7 +145,7 @@ async function countError() {
 
                     if (fullPageContent.includes('您浏览的太快了，歇一会儿吧！')) {
                         console.warn("too fast");
-                        await wait(60000);
+                        countError()
                         await threadPage.close()
                         i--;
                         continue;
@@ -214,8 +214,8 @@ async function countError() {
                                         if (htmlStr.includes('Discuz! System Error')) {
                                             break
                                         } else if (htmlStr.includes('您浏览的太快了，歇一会儿吧！')) {
-                                            await wait(60000)
                                             console.log('too fast')
+                                            countError()
                                         } else if (htmlStr.includes('抱歉，只有特定用户可以下载本站附件')) {
                                             console.log('only unique')
                                             continue
@@ -286,7 +286,3 @@ async function countError() {
     db.close();
     await browser.close();
 })();
-
-function wait(ms) {
-    return new Promise(resolve => setTimeout(resolve, ms));
-}
