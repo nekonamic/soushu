@@ -3,6 +3,7 @@ const path = require('path');
 const Database = require('better-sqlite3');
 const fs = require('fs')
 const axios = require('axios');
+const iconv = require("iconv-lite");
 
 const dbPath = './novel.db';
 
@@ -57,11 +58,11 @@ async function countError() {
 (async () => {
     const domain = '3cbg9.sdgvre54q.com'
     const baseUrl = 'https://3cbg9.sdgvre54q.com/'
-    const mobileTXTPath = 'forum.php?mod=forumdisplay&fid=40&page=307'
+    const mobileTXTPath = 'forum.php?mod=forumdisplay&fid=102&page=252'
     const savePath = './downloads'
 
     const browser = await chromium.launch({
-        headless: false,
+        headless: true,
         proxy: {
             server: "http://127.0.0.1:60000"
         }
@@ -203,17 +204,21 @@ async function countError() {
                                     let filename = '';
                                     const buffer = await response.body();
 
+                                    const htmlStr = iconv.decode(buffer, "gb2312");
                                     if (contentDisposition) {
                                         const filenameMatch = contentDisposition.match(/filename="?(.+)"?/);
                                         if (filenameMatch && filenameMatch[1]) {
                                             filename = filenameMatch[1];
                                         }
                                     } else {
-                                        if (buffer.toString().includes('Discuz! System Error')) {
+                                        if (htmlStr.includes('Discuz! System Error')) {
                                             break
-                                        } else if (buffer.toString().includes('您浏览的太快了，歇一会儿吧！')) {
+                                        } else if (htmlStr.includes('您浏览的太快了，歇一会儿吧！')) {
                                             await wait(60000)
                                             console.log('too fast')
+                                        } else if (htmlStr.includes('抱歉，只有特定用户可以下载本站附件')) {
+                                            console.log('only unique')
+                                            continue
                                         }
                                         i--
                                         continue
