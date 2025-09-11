@@ -226,11 +226,11 @@ async function countError() {
 (async () => {
     const domain = '3cbg9.sdgvre54q.com'
     const baseUrl = 'https://3cbg9.sdgvre54q.com/'
-    const mobileTXTPath = 'forum.php?mod=forumdisplay&fid=100'
+    const mobileTXTPath = 'forum.php?mod=forumdisplay&fid=100&page=21'
     const savePath = './downloads'
 
     const browser = await chromium.launch({
-        headless: false,
+        headless: true,
         proxy: {
             server: "http://127.0.0.1:60000"
         }
@@ -352,7 +352,7 @@ async function countError() {
                                     var response
                                     while (true) {
                                         try {
-                                            response = await threadPage.request.get(downloadLink, { timeout: 20000 });
+                                            response = await threadPage.request.get(downloadLink, { timeout: 2000000 });
                                         } catch (err) {
                                             countError()
                                             console.log(err)
@@ -428,6 +428,11 @@ async function countError() {
                 while (true) {
                     try {
                         await page.goto(baseUrl + nextPath, { waitUntil: 'domcontentloaded', timeout: 20000 })
+                        try {
+                            fs.writeFileSync('currentPage.txt', nextPath, 'utf8');
+                        } catch (err) {
+                            console.error('save current page error:', err);
+                        }
                         contentStr = await page.content();
                     } catch (err) {
                         countError()
