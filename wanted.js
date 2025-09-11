@@ -2,6 +2,176 @@ const { chromium } = require('playwright');
 const path = require('path');
 const Database = require('better-sqlite3');
 const fs = require('fs')
+const axios = require('axios');
+const iconv = require("iconv-lite");
+const rawCookies = [
+    {
+        "domain": ".sdgvre54q.com",
+        "expirationDate": 1757639386.46044,
+        "hostOnly": false,
+        "httpOnly": false,
+        "name": "yj0M_eda4_lastact",
+        "path": "/",
+        "sameSite": null,
+        "secure": true,
+        "session": false,
+        "storeId": null,
+        "value": "1757552987%09index.php%09"
+    },
+    {
+        "domain": ".sdgvre54q.com",
+        "expirationDate": 1758856508.207655,
+        "hostOnly": false,
+        "httpOnly": false,
+        "name": "yj0M_eda4_lastvisit",
+        "path": "/",
+        "sameSite": null,
+        "secure": true,
+        "session": false,
+        "storeId": null,
+        "value": "1756260907"
+    },
+    {
+        "domain": ".sdgvre54q.com",
+        "expirationDate": 1757553586,
+        "hostOnly": false,
+        "httpOnly": false,
+        "name": "yj0M_eda4_noticeTitle",
+        "path": "/",
+        "sameSite": null,
+        "secure": false,
+        "session": false,
+        "storeId": null,
+        "value": "1"
+    },
+    {
+        "domain": ".sdgvre54q.com",
+        "expirationDate": 1758856508.207578,
+        "hostOnly": false,
+        "httpOnly": true,
+        "name": "yj0M_eda4_saltkey",
+        "path": "/",
+        "sameSite": null,
+        "secure": true,
+        "session": false,
+        "storeId": null,
+        "value": "G3L8G5u8"
+    },
+    {
+        "domain": "3cbg9.sdgvre54q.com",
+        "hostOnly": true,
+        "httpOnly": false,
+        "name": "PHPSESSID",
+        "path": "/",
+        "sameSite": null,
+        "secure": false,
+        "session": true,
+        "storeId": null,
+        "value": "88v9frmgvkautnpeheqphn7675"
+    },
+    {
+        "domain": ".sdgvre54q.com",
+        "hostOnly": false,
+        "httpOnly": true,
+        "name": "yj0M_eda4_auth",
+        "path": "/",
+        "sameSite": null,
+        "secure": true,
+        "session": true,
+        "storeId": null,
+        "value": "4ecbI%2Bd%2Bcbhcc70Pdz86HhNR6Qu%2BWvGZQMFpYhNfVxI7ZSFjn50ZjuXSGVR6FQXqU4%2FFjvdvyCpSXB56PqX7tkAhSvo"
+    },
+    {
+        "domain": ".sdgvre54q.com",
+        "expirationDate": 1757553012.240993,
+        "hostOnly": false,
+        "httpOnly": false,
+        "name": "yj0M_eda4_checkfollow",
+        "path": "/",
+        "sameSite": null,
+        "secure": true,
+        "session": false,
+        "storeId": null,
+        "value": "1"
+    },
+    {
+        "domain": ".sdgvre54q.com",
+        "expirationDate": 1789088982.240973,
+        "hostOnly": false,
+        "httpOnly": false,
+        "name": "yj0M_eda4_lastcheckfeed",
+        "path": "/",
+        "sameSite": null,
+        "secure": true,
+        "session": false,
+        "storeId": null,
+        "value": "679983%7C1757552983"
+    },
+    {
+        "domain": ".sdgvre54q.com",
+        "hostOnly": false,
+        "httpOnly": false,
+        "name": "yj0M_eda4_lip",
+        "path": "/",
+        "sameSite": null,
+        "secure": true,
+        "session": true,
+        "storeId": null,
+        "value": "185.148.13.178%2C1757552983"
+    },
+    {
+        "domain": ".sdgvre54q.com",
+        "expirationDate": 1789088986.460502,
+        "hostOnly": false,
+        "httpOnly": false,
+        "name": "yj0M_eda4_nofavfid",
+        "path": "/",
+        "sameSite": null,
+        "secure": true,
+        "session": false,
+        "storeId": null,
+        "value": "1"
+    },
+    {
+        "domain": ".sdgvre54q.com",
+        "expirationDate": 1757553268.773737,
+        "hostOnly": false,
+        "httpOnly": false,
+        "name": "yj0M_eda4_sendmail",
+        "path": "/",
+        "sameSite": null,
+        "secure": true,
+        "session": false,
+        "storeId": null,
+        "value": "1"
+    },
+    {
+        "domain": ".sdgvre54q.com",
+        "expirationDate": 1757639386.460293,
+        "hostOnly": false,
+        "httpOnly": false,
+        "name": "yj0M_eda4_sid",
+        "path": "/",
+        "sameSite": null,
+        "secure": true,
+        "session": false,
+        "storeId": null,
+        "value": "0"
+    },
+    {
+        "domain": ".sdgvre54q.com",
+        "expirationDate": 1789088982.240897,
+        "hostOnly": false,
+        "httpOnly": false,
+        "name": "yj0M_eda4_ulastactivity",
+        "path": "/",
+        "sameSite": null,
+        "secure": true,
+        "session": false,
+        "storeId": null,
+        "value": "1757552983%7C0"
+    }
+]
 
 const dbPath = './wanted.db';
 
@@ -15,35 +185,68 @@ db.prepare(`
     )
 `).run();
 
+let currentProxy = 0
+let errorCount = 0
+
+async function countError() {
+    let useProxy = ""
+    try {
+        errorCount++
+        if (errorCount == 10) {
+            errorCount = 0
+            useProxy = "direct"
+        } else {
+            currentProxy++
+            currentProxy = currentProxy % 116
+            useProxy = currentProxy.toString()
+        }
+        const url = `http://127.0.0.1:59999/proxies/selected`;
+
+        const res = await axios.put(
+            url,
+            { name: useProxy },
+            {
+                headers: {
+                    "Content-Type": "application/json",
+                },
+                validateStatus: () => true,
+            }
+        );
+
+        if (res.status === 204) {
+            console.log("proxy changed", useProxy);
+        } else {
+            console.error("change proxy error http", res.data);
+        }
+    } catch (err) {
+        console.error("change proxy error:", err.message);
+    }
+}
+
 (async () => {
     const domain = '3cbg9.sdgvre54q.com'
     const baseUrl = 'https://3cbg9.sdgvre54q.com/'
-    const mobileTXTPath = 'forum.php?mod=forumdisplay&fid=51&page=5'
+    const mobileTXTPath = 'forum.php?mod=forumdisplay&fid=100&page=21'
     const savePath = './wanted-downloads'
 
     const browser = await chromium.launch({
         headless: true,
         proxy: {
-            server: "http://127.0.0.1:7891"
+            server: "http://127.0.0.1:60000"
         }
     });
     const context = await browser.newContext({
         ignoreHTTPSErrors: true
     });
-    const cookieString = `yj0M_eda4_saltkey=Zj2pqQCn; yj0M_eda4_lastvisit=1756258948; yj0M_eda4_lastact=1756262702%09index.php%09; PHPSESSID=ollfild76oisbps0h8shvvnh7l; yj0M_eda4_st_t=2527028%7C1756262620%7C847996d4cad16b3af85a3f76d1da95b6; yj0M_eda4_sendmail=1; yj0M_eda4_ulastactivity=1756262607%7C0; yj0M_eda4_auth=cb86O5Ui0pLJxSEbgg7pzR9RVTGzjUotZC5Bd5e2KlpjlUFN9zqA7ySaR5AApNnLc6aMKhfgwqqd9uXBQDNsDANcbP5C; yj0M_eda4_lastcheckfeed=2527028%7C1756262607; yj0M_eda4_lip=221.6.242.203%2C1756262607; yj0M_eda4_sid=0; yj0M_eda4_forum_lastvisit=D_102_1756262620`;
-
-    const cookies = cookieString.split('; ').map(item => {
-        const [name, ...rest] = item.split('=');
-        const value = rest.join('=');
-        return {
-            name,
-            value,
-            domain: domain,
-            path: '/',
-            httpOnly: false,
-            secure: false,
-        };
-    });
+    const cookies = rawCookies.map(c => ({
+        name: c.name,
+        value: c.value,
+        domain: c.domain,
+        path: c.path || '/',
+        httpOnly: c.httpOnly || false,
+        secure: c.secure || false,
+        expires: c.expirationDate ? Math.floor(c.expirationDate) : undefined,
+    }));
     const blankPage = await context.newPage();
 
     await context.addCookies(cookies);
@@ -53,6 +256,7 @@ db.prepare(`
         try {
             await page.goto(baseUrl + mobileTXTPath, { waitUntil: 'domcontentloaded', timeout: 20000 });
         } catch (err) {
+            countError()
             console.log(err)
             await page.close()
             page = await context.newPage();
@@ -68,8 +272,7 @@ db.prepare(`
 
         for (let i = 0; i < count; i++) {
             const id = await threadList.nth(i).getAttribute('id');
-            const threadText = await threadList.nth(i).textContent()
-            if (id != null && threadText != null) {
+            if (id != null) {
                 if (id.includes("normalthread") && threadText.includes("[已解决]")) {
                     const link = threadList.nth(i).locator('a.s.xst').first();
                     const href = await link.getAttribute('href');
@@ -93,6 +296,7 @@ db.prepare(`
                     try {
                         await threadPage.goto(baseUrl + href, { waitUntil: 'domcontentloaded', timeout: 20000 });
                     } catch (err) {
+                        countError()
                         console.log(err)
                         await threadPage.close()
                         i--
@@ -104,7 +308,7 @@ db.prepare(`
 
                     if (fullPageContent.includes('您浏览的太快了，歇一会儿吧！')) {
                         console.warn("too fast");
-                        await wait(60000);
+                        countError()
                         await threadPage.close()
                         i--;
                         continue;
@@ -126,6 +330,7 @@ db.prepare(`
                         title = await titleElement.textContent();
                         console.log(title)
                     } catch (err) {
+                        countError()
                         console.log(err)
                         await threadPage.close()
                         i--
@@ -135,7 +340,6 @@ db.prepare(`
 
                     const aList = threadPage.locator('div.pcb').nth(1).locator('a');
                     const count = await aList.count();
-
                     let fileCount = 0
 
                     if (count != 0) {
@@ -148,8 +352,9 @@ db.prepare(`
                                     var response
                                     while (true) {
                                         try {
-                                            response = await threadPage.request.get(downloadLink);
+                                            response = await threadPage.request.get(downloadLink, { timeout: 2000000 });
                                         } catch (err) {
+                                            countError()
                                             console.log(err)
                                             continue
                                         }
@@ -162,17 +367,21 @@ db.prepare(`
                                     let filename = '';
                                     const buffer = await response.body();
 
+                                    const htmlStr = iconv.decode(buffer, "gb2312");
                                     if (contentDisposition) {
                                         const filenameMatch = contentDisposition.match(/filename="?(.+)"?/);
                                         if (filenameMatch && filenameMatch[1]) {
                                             filename = filenameMatch[1];
                                         }
                                     } else {
-                                        if (buffer.toString().includes('Discuz! System Error')) {
+                                        if (htmlStr.includes('Discuz! System Error')) {
                                             break
-                                        } else if (buffer.toString().includes('您浏览的太快了，歇一会儿吧！')) {
-                                            await wait(60000)
+                                        } else if (htmlStr.includes('您浏览的太快了，歇一会儿吧！')) {
                                             console.log('too fast')
+                                            countError()
+                                        } else if (htmlStr.includes('抱歉，只有特定用户可以下载本站附件')) {
+                                            console.log('only unique')
+                                            continue
                                         }
                                         i--
                                         continue
@@ -191,7 +400,6 @@ db.prepare(`
                                 }
                             }
                         }
-
                     }
 
                     if (fileCount != 0) {
@@ -199,6 +407,7 @@ db.prepare(`
                             const stmt = db.prepare(`INSERT INTO novels (tid, title, content) VALUES (?, ?, ?)`);
                             stmt.run(tid, title, '');
                         } catch (err) {
+                            countError()
                             console.error(err);
                         }
                     }
@@ -208,19 +417,25 @@ db.prepare(`
             }
         }
 
-        const nextElement = page.locator('a.nxt').first();
-        if (nextElement == null) {
+        const nextElements = page.locator('a.nxt');
+        if (nextElements.count() == 0) {
             console.log('pass')
             break
         } else {
-            const nextPath = await nextElement.getAttribute('href')
+            const nextPath = await nextElements.first().getAttribute('href')
             var contentStr = ''
             if (nextPath != null) {
                 while (true) {
                     try {
                         await page.goto(baseUrl + nextPath, { waitUntil: 'domcontentloaded', timeout: 20000 })
+                        try {
+                            fs.writeFileSync('currentPage.txt', nextPath, 'utf8');
+                        } catch (err) {
+                            console.error('save current page error:', err);
+                        }
                         contentStr = await page.content();
                     } catch (err) {
+                        countError()
                         console.log(err)
                         await page.close()
                         page = await context.newPage();
@@ -239,7 +454,3 @@ db.prepare(`
     db.close();
     await browser.close();
 })();
-
-function wait(ms) {
-    return new Promise(resolve => setTimeout(resolve, ms));
-}
